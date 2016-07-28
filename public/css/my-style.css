@@ -1,0 +1,44 @@
+body {
+	background: #dddddd;
+}
+.navbar-brand {
+	color: #FFF !important;
+	font-weight: 600;
+}
+.float-right {
+	float: right;
+}
+.margin5 {
+	margin: 5px;
+}
+.footer {
+    position: absolute;
+    bottom: 0;
+    height: 40px;
+}
+.stronger {
+	font-weight: 700;
+}
+hr {
+	border: 1px solid #000;
+	margin: 2px;
+}
+body h2 {
+	margin: 5px;
+}
+.margin-right-5 {
+	margin-right: 5px;
+}
+.no-decoration {
+	text-decoration: none;
+	list-style: none;
+}
+.legend-no-bottom {
+	margin-bottom: 0px;
+}
+legend {
+	border-bottom: 1px solid #000;
+}
+.navbar {
+	margin-bottom: 5px;
+}

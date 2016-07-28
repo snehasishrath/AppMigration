@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>TechM AMT Migrations</title>
+		<!-- Latest compiled and minified CSS -->
+		<link rel="stylesheet" type="text/css" href="../css/bootstrap.min.css"/>
+		<!-- Optional theme -->
+		<link rel="stylesheet" type="text/css" href="../css/bootstrap-theme.min.css"/>
+		<link rel="stylesheet" type="text/css" href="../css/my-style.css"/>
+	</head>
+	<body class="container-fluid">
+		<div class="col-lg-12">
+			<nav class="navbar navbar-inverse">
+				<div class="container-fluid margin5">
+				    <div class="navbar-header">
+				    	<a class="navbar-brand" href="/">TechM App Migration Tool</a>
+				    </div>
+				    <ul class="nav navbar-nav">
+				    	<li><a href="/">Home</a></li>
+				    	<li class="active"><a href="/migration">Migration Tool</a></li>
+				    	<li><a href="/reports">Reports</a></li>
+				    	<li><a href="/wiki">User Wiki</a></li>
+				    	<li><a href="/contacts">Contact</a></li>
+				    </ul>
+				    <a href="#" class="float-right"><img src="images/logo_techm.png"/></a>
+			  	</div>		  	    
+			</nav>
+		</div>
+		<div class="col-lg-12">
+			<h2>Migration Tool</h2>
+			<hr/>
+			<form class="container col-lg-6" action="http://10.30.53.60:1134/process_migration" method="POST">
+				<div class="margin5">
+					<legend>Source</legend>
+					<div class="col-lg-12">
+						<label class="col-lg-6">Source Location</label>					
+						<input class="col-lg-6" type="text" placeholder="Source IP / Path" name="sourceLocation"/>
+					</div>					
+				</div>
+				<div class="margin5">
+					<legend>Destination</legend>
+					<div class="col-lg-12">
+						<label class="col-lg-6">Destination Location</label>
+						<input class="col-lg-6" type="text" placeholder="Destination IP / Path" name="destLocation"/>
+					</div>
+					<div class="col-lg-12">
+						<label class="col-lg-6">Username</label>
+						<input class="col-lg-6" type="text" placeholder="Username" name="destUsername"/>
+					</div>
+					<div class="col-lg-12">
+						<label class="col-lg-6">Password</label>
+						<input class="col-lg-6" type="password" placeholder="Password" name="destPassword"/>
+					</div>
+				</div>
+				<div class="margin5">
+                    <legend>Objects</legend>
+					<div class="col-lg-12">
+                        <label class="col-lg-6">Operating System</label>
+                        <select class="col-lg-6" name="object-type">
+							<option>--select--</option>
+							<option>Red Hat</option>
+							<option>CentOS</option>
+							<option>Ubuntu</option>
+						</select>
+                    </div>							
+            	</div>
+				<div class="margin5">
+                    <legend>Migration Objects</legend>
+					<div class="col-lg-12 margin5">
+                        <label class="col-lg-12">Web Servers</label>
+                        <span class="col-lg-4">
+							<input type="checkbox" name="apacheTomcat"/>
+							<label>Apache Tomcat</label>
+						</span>
+						<span class="col-lg-4">
+                            <input type="checkbox" name="nodejsServer"/>
+							<label>NodeJS</label>
+						</span>
+						<span class="col-lg-4">
+                            <input type="checkbox" name="jbossServer"/>
+							<label>JBOSS</label>
+						</span>
+						<span class="col-lg-4">
+                            <input type="checkbox" name="nginxServer"/>
+							<label>Nginx</label>
+						</span>						
+                    </div>
+            	</div>
+				<div class="col-lg-12 margin5">
+					<input class="col-lg-4" type="reset" value="Reset"/>
+					<input class="col-lg-4" type="submit" value="Start Migration!"/>
+				</div>
+			</form>
+			<div class="col-lg-6">
+				<div class="margin5">
+					<legend>Migration Progress</legend>
+					<div class="progress">
+					  	<div class="progress-bar progress-bar-success progress-bar-striped active" role="progressbar" aria-valuenow="70" aria-valuemin="0" aria-valuemax="100" style="width:70%">
+					    	<span class="sr-only">% Complete</span>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>		
+		<!-- Latest compiled and minified JavaScript -->
+		<!--<script src="../js/bootstrap.min.js"></script>-->
+	</body>
+	<footer class="footer container text-center text-muted">Tech Mahindra 2016 &#0169; All Rights Reserved.</footer>
+</html>

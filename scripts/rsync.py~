@@ -1,0 +1,10 @@
+import os
+import subprocess
+
+source = "/home/compute5/MigrationApp/scripts/testfile"
+dest = "compute6@10.30.53.68:~/home/compute6/MigrationApp/Destination"
+cmd = "rsync -avz --stats " + source + " " + dest + " --progress"
+
+o, e = subprocess.Popen(cmd, shell=True).communicate()
+
+if o: print(o);
