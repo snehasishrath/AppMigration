@@ -29,19 +29,21 @@
 		<div class="col-lg-12">
 			<h2>Migration Tool</h2>
 			<hr/>
-			<form class="container col-lg-6" action="http://10.30.53.60:1134/process_migration" method="POST">
+			<form class="container col-lg-6" action="http://127.0.0.1:8134/process_migration" method="POST">
 				<div class="margin5">
 					<legend>Source</legend>
 					<div class="col-lg-12">
 						<label class="col-lg-6">Source Location</label>					
-						<input class="col-lg-6" type="text" placeholder="Source IP / Path" name="sourceLocation"/>
+						<input class="col-lg-2" type="text" placeholder="Source IP" name="sourceIp"/>
+						<input class="col-lg-4" type="text" placeholder="(specific path)" name="sourceLocation"/>
 					</div>					
 				</div>
 				<div class="margin5">
 					<legend>Destination</legend>
 					<div class="col-lg-12">
 						<label class="col-lg-6">Destination Location</label>
-						<input class="col-lg-6" type="text" placeholder="Destination IP / Path" name="destLocation"/>
+						<input class="col-lg-2" type="text" placeholder="Destination IP" name="destIp"/>
+					    <input class="col-lg-4" type="text" placeholder="(specific path)" name="destLocation"/>
 					</div>
 					<div class="col-lg-12">
 						<label class="col-lg-6">Username</label>

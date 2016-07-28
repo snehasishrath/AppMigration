@@ -1,6 +1,8 @@
 var express = require('express'),
     bodyParser = require('body-parser'),
-    config = require('./config');
+    config = require('./config'),
+    exec = require('child_process').exec,
+    fs = require('fs');
   
 var app = express();
 app.use(bodyParser.json({ type: [ 'json', '+json' ] }));
@@ -52,10 +54,6 @@ app.post('/process_migration', function (req, res) {
    };
    console.log(JSON.stringify(response));
 
-   var responseBuffer = "";
-
-   var importStatements = "import os;import subprocess;"
-
    var local_source = req.body.sourceLocation
    var remote_dest = req.body.destLocation
    
@@ -81,14 +79,41 @@ app.post('/process_migration', function (req, res) {
     responseBuffer += "nginxServer";
    }
 
-   //var prepVariables = "local = " + local_source + "; remote = " + remote_dest + ";"
-   //var rsync = "cmd = rsync -avz --stats local remote --progress;"
-   //var subprocess = "o, e = subprocess.Popen(cmd, shell=True, stdout = subprocess.PIPE, stderr = subprocess.PIPE).communicate();"
-   //var printOutput = "if o: print(o);"
-   //res.end(importStatements + prepVariables + rsync + subprocess + printOutput);
-   //res.end("File not found: " + importStatements + prepVariables + rsync + subprocess + printOutput);
+   fs.appendFile('C:/Users/GeorgeDavis/Desktop/MigrationApp/MigrationApp/scripts/local-web-to-source.sh', 'sshpass -p ' + destPassword + ' ssh -o StrictHostKeyChecking=no root@' + destIp + ' apt-get install sshpass -y', function (err) {
+       if (err) throw err;
+       console.log('sshpass -p ' + destPassword + ' ssh -o StrictHostKeyChecking=no root@' + destIp + ' apt-get install sshpass -y');
+   });
+   fs.appendFile('C:/Users/GeorgeDavis/Desktop/MigrationApp/MigrationApp/scripts/local-web-to-source.sh', 'sshpass -p ' + destPassword + ' rsync migration-script.sh root@' + destIp + ', function (err) {
+       if (err) throw err;
+       console.log('sshpass -p ' + destPassword + ' rsync migration-script.sh root@' + destIp + ');
+   });
+   fs.appendFile('C:/Users/GeorgeDavis/Desktop/MigrationApp/MigrationApp/scripts/local-web-to-source.sh', 'sshpass -p ' + destPassword + ' ssh -o StrictHostKeyChecking=no root@' + destIp + ' chmod +x migration-script.sh', function (err) {
+       if (err) throw err;
+       console.log('sshpass -p ' + destPassword + ' ssh -o StrictHostKeyChecking=no root@' + destIp + ' chmod +x migration-script.sh');
+   });
+   fs.appendFile('C:/Users/GeorgeDavis/Desktop/MigrationApp/MigrationApp/scripts/local-web-to-source.sh', 'sshpass -p ' + destPassword + ' ssh -o StrictHostKeyChecking=no root@' + destIp + ' bash migration-script.sh', function (err) {
+       if (err) throw err;
+       console.log('sshpass -p ' + destPassword + ' ssh -o StrictHostKeyChecking=no root@' + destIp + ' bash migration-script.sh');
+   });
 
-   res.end("Selected " + responseBuffer + " Source: " + local_source + " Destination: " + remote_dest);
+   fs.appendFile('C:/Users/GeorgeDavis/Desktop/MigrationApp/MigrationApp/scripts/migration-script.sh', 'rsync -avz --stats' + req.body.sourceLocation + 'root@' + req.body.destIp + ' --progress', function (err) {
+       if (err) throw err;
+       console.log('rsync -avz --stats' + req.body.sourceLocation + 'root@' + req.body.destIp + ' --progress');
+   });
+
+   exec ('dir', function(err, stdout, stderr) {
+       console.log(stdout.toString('utf8'));
+       responseBuffer += responseBuffer;
+   });
+
+   console.log("Response: " + responseBuffer);
+
+   /*
+   // http://nodejs.org/api.html#_child_processes var sys = require('sys') var exec = require('child_process').exec; var child; // executes `pwd` child = exec("pwd", function (error, stdout, stderr) { sys.print('stdout: ' + stdout); sys.print('stderr: ' + stderr); if (error !== null) { console.log('exec error: ' + error); } }); 
+
+    // or more concisely
+    //var sys = require('sys') var exec = require('child_process').exec; function puts(error, stdout, stderr) { sys.puts(stdout) } exec("ls -la", puts);
+    */
 })
 
 app.use(function(req,res) {
