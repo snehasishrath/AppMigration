@@ -29,28 +29,28 @@
 		<div class="col-lg-12">
 			<h2>Migration Tool</h2>
 			<hr/>
-			<form class="container col-lg-6" action="http://127.0.0.1:8134/process_migration" method="POST">
+			<form class="container col-lg-12" action="http://10.30.53.60:8088/process_migration" method="POST">
 				<div class="margin5">
 					<legend>Source</legend>
 					<div class="col-lg-12">
-						<label class="col-lg-6">Source Location</label>					
-						<input class="col-lg-2" type="text" placeholder="Source IP" name="sourceIp"/>
-						<input class="col-lg-4" type="text" placeholder="(specific path)" name="sourceLocation"/>
+						<label class="col-lg-3">Source Location</label>					
+						<input class="col-lg-3" type="text" placeholder="Source IP" name="sourceIp"/>
+						<input class="col-lg-6" type="text" placeholder="(specific path)" name="sourceLocation"/>
 					</div>					
 				</div>
 				<div class="margin5">
 					<legend>Destination</legend>
 					<div class="col-lg-12">
-						<label class="col-lg-6">Destination Location</label>
-						<input class="col-lg-2" type="text" placeholder="Destination IP" name="destIp"/>
-					    <input class="col-lg-4" type="text" placeholder="(specific path)" name="destLocation"/>
+						<label class="col-lg-3">Destination Location</label>
+						<input class="col-lg-3" type="text" placeholder="Destination IP" name="destIp"/>
+					    <input class="col-lg-6" type="text" placeholder="(specific path)" name="destLocation"/>
 					</div>
 					<div class="col-lg-12">
 						<label class="col-lg-6">Username</label>
 						<input class="col-lg-6" type="text" placeholder="Username" name="destUsername"/>
 					</div>
 					<div class="col-lg-12">
-						<label class="col-lg-6">Password</label>
+						<label class="col-lg-6">Root Password</label>
 						<input class="col-lg-6" type="password" placeholder="Password" name="destPassword"/>
 					</div>
 				</div>
@@ -71,29 +71,31 @@
 					<div class="col-lg-12 margin5">
                         <label class="col-lg-12">Web Servers</label>
                         <span class="col-lg-4">
-							<input type="checkbox" name="apacheTomcat"/>
+							<input type="checkbox" name="apacheTomcat" onchange="specificPathReminder(this, 'Apache Tomcat')" />
 							<label>Apache Tomcat</label>
 						</span>
 						<span class="col-lg-4">
-                            <input type="checkbox" name="nodejsServer"/>
+                            <input type="checkbox" name="nodejsServer" onchange="specificPathReminder(this,'Node.JS server')" />
 							<label>NodeJS</label>
 						</span>
 						<span class="col-lg-4">
-                            <input type="checkbox" name="jbossServer"/>
+                            <input type="checkbox" name="jbossServer" onchange="specificPathReminder(this,'JBOSS Server')" />
 							<label>JBOSS</label>
 						</span>
 						<span class="col-lg-4">
-                            <input type="checkbox" name="nginxServer"/>
+                            <input type="checkbox" name="nginxServer" onchange="specificPathReminder(this,'Nginx server')" />
 							<label>Nginx</label>
 						</span>						
                     </div>
             	</div>
 				<div class="col-lg-12 margin5">
-					<input class="col-lg-4" type="reset" value="Reset"/>
-					<input class="col-lg-4" type="submit" value="Start Migration!"/>
+					<div class="col-lg-8">
+						<input class="col-lg-4" type="reset" value="Reset"/>
+						<input class="col-lg-4" type="submit" value="Start Migration!"/>
+					</div>
 				</div>
 			</form>
-			<div class="col-lg-6">
+			<!--<div class="col-lg-4">
 				<div class="margin5">
 					<legend>Migration Progress</legend>
 					<div class="progress">
@@ -102,10 +104,18 @@
 						</div>
 					</div>
 				</div>
-			</div>
+			</div>-->
 		</div>		
 		<!-- Latest compiled and minified JavaScript -->
 		<!--<script src="../js/bootstrap.min.js"></script>-->
 	</body>
 	<footer class="footer container text-center text-muted">Tech Mahindra 2016 &#0169; All Rights Reserved.</footer>
+	<script>
+	function specificPathReminder(element, context)
+	{
+		if(element.checked) {			
+			alert("Please be sure to set specific path (if required) for " + context + "!");		
+		}
+	}
+	</script>
 </html>

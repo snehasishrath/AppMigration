@@ -1,1 +1,1 @@
-rsync -avz --stats testfile root@10.30.53.68 --progressrsync -avz --stats testfile root@10.30.53.68 --progressrsync -avz --stats testfile root@10.30.53.68 --progressrsync -avz --stats testfile root@10.30.53.68 --progressrsync -avz --statsIProot@IP --progressrsync -avz --statsIProot@IP --progress
+rsync -avz --stats root@10.30.53.76 --progress 

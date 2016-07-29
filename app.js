@@ -1,8 +1,10 @@
 var express = require('express'),
     bodyParser = require('body-parser'),
-    config = require('./config'),
-    exec = require('child_process').exec,
-    fs = require('fs');
+    config = require('./config');
+var exec = require('child_process').exec,
+    fs = require('fs'),
+    path = require('path'),
+    mysql = require('node-mysql');
   
 var app = express();
 app.use(bodyParser.json({ type: [ 'json', '+json' ] }));
@@ -41,12 +43,14 @@ app.get('/contacts', function(req, res) {
 })
 
 app.post('/process_migration', function (req, res) {
-  console.log("Got a POST request for /process_migration" + " ' " + JSON.stringify(req.query) + " '");
+  console.log("Got a POST request for /process_migration" + " ' " + JSON.stringify(req.body) + " '");
    response = {
-       	source: req.body.sourceLocation,
-       	destination: req.body.destLocation,
-        username: req.body.destUsername,
-	      password: req.body.destPassword,
+       	sourceIp: req.body.sourceIp,
+        sourceLocation: req.body.sourceLocation,
+       	destIp: req.body.destIp,
+        destLocation: req.body.destLocation,
+        destUsername: req.body.destUsername,
+	      destPassword: req.body.destPassword,
 	      apacheTomcat: req.body.apacheTomcat,
         nodejsServer: req.body.nodejsServer,
         jbossServer: req.body.jbossServer,
@@ -54,66 +58,77 @@ app.post('/process_migration', function (req, res) {
    };
    console.log(JSON.stringify(response));
 
-   var local_source = req.body.sourceLocation
-   var remote_dest = req.body.destLocation
+   var responseBuffer = ""
+   
+   var sourceIp = req.body.sourceIp
+   var sourceLocation = req.body.sourceLocation
+   var destIp = req.body.destIp
+   var destLocation = req.body.destLocation
+   var destPassword = req.body.destPassword
    
    if(req.body.apacheTomcat)
    {
-    console.log("Selected apacheTomcat");
+    console.log("\r\n Selected Apache Tomcat");
     responseBuffer += "apacheTomcat";
-    local_source += '/opt'
+    sourceLocation += '/opt'
    }
    if(req.body.nodejsServer)
    {
-    console.log("Selected nodejsServer");
+    console.log("\r\n Selected Node.JS Server");
     responseBuffer += "nodejsServer";
    }
    if(req.body.jbossServer)
    {
-    console.log("Selected jbossServer");
+    console.log("\r\n Selected JBOSS Server");
     responseBuffer += "jbossServer";
    }
    if(req.body.nginxServer)
    {
-    console.log("Selected nginxServer");
+    console.log("\r\n Selected Nginx Server");
     responseBuffer += "nginxServer";
    }
 
-   fs.appendFile('C:/Users/GeorgeDavis/Desktop/MigrationApp/MigrationApp/scripts/local-web-to-source.sh', 'sshpass -p ' + destPassword + ' ssh -o StrictHostKeyChecking=no root@' + destIp + ' apt-get install sshpass -y', function (err) {
+   fs.writeFile('scripts/local-web-to-source.sh', 'sshpass -p ' + destPassword + ' ssh -o StrictHostKeyChecking=no root@' + destIp + ' apt-get install sshpass -y \r\n', function (err) {
        if (err) throw err;
        console.log('sshpass -p ' + destPassword + ' ssh -o StrictHostKeyChecking=no root@' + destIp + ' apt-get install sshpass -y');
    });
-   fs.appendFile('C:/Users/GeorgeDavis/Desktop/MigrationApp/MigrationApp/scripts/local-web-to-source.sh', 'sshpass -p ' + destPassword + ' rsync migration-script.sh root@' + destIp + ', function (err) {
+   fs.appendFile('scripts/local-web-to-source.sh', 'sshpass -p ' + destPassword + ' rsync migration-script.sh root@' + destIp + '\r\n', function (err) {
        if (err) throw err;
-       console.log('sshpass -p ' + destPassword + ' rsync migration-script.sh root@' + destIp + ');
+       console.log('sshpass -p ' + destPassword + ' rsync migration-script.sh root@' + destIp);
    });
-   fs.appendFile('C:/Users/GeorgeDavis/Desktop/MigrationApp/MigrationApp/scripts/local-web-to-source.sh', 'sshpass -p ' + destPassword + ' ssh -o StrictHostKeyChecking=no root@' + destIp + ' chmod +x migration-script.sh', function (err) {
+   fs.appendFile('scripts/local-web-to-source.sh', 'sshpass -p ' + destPassword + ' ssh -o StrictHostKeyChecking=no root@' + destIp + ' chmod +x migration-script.sh \r\n', function (err) {
        if (err) throw err;
        console.log('sshpass -p ' + destPassword + ' ssh -o StrictHostKeyChecking=no root@' + destIp + ' chmod +x migration-script.sh');
    });
-   fs.appendFile('C:/Users/GeorgeDavis/Desktop/MigrationApp/MigrationApp/scripts/local-web-to-source.sh', 'sshpass -p ' + destPassword + ' ssh -o StrictHostKeyChecking=no root@' + destIp + ' bash migration-script.sh', function (err) {
+   fs.appendFile('scripts/local-web-to-source.sh', 'sshpass -p ' + destPassword + ' ssh -o StrictHostKeyChecking=no root@' + destIp + ' bash migration-script.sh \r\n', function (err) {
        if (err) throw err;
        console.log('sshpass -p ' + destPassword + ' ssh -o StrictHostKeyChecking=no root@' + destIp + ' bash migration-script.sh');
    });
 
-   fs.appendFile('C:/Users/GeorgeDavis/Desktop/MigrationApp/MigrationApp/scripts/migration-script.sh', 'rsync -avz --stats' + req.body.sourceLocation + 'root@' + req.body.destIp + ' --progress', function (err) {
+   fs.writeFile('scripts/migration-script.sh', 'rsync -avz --stats ' + sourceLocation + 'root@' + destIp + ' --progress \r\n', function (err) {
        if (err) throw err;
-       console.log('rsync -avz --stats' + req.body.sourceLocation + 'root@' + req.body.destIp + ' --progress');
+       console.log('rsync -avz --stats ' + sourceLocation + ' root@' + destIp + ' --progress');
    });
 
-   exec ('dir', function(err, stdout, stderr) {
+   /*exec ('bash scripts/rsync.py~', function(err, stdout, stderr) {
        console.log(stdout.toString('utf8'));
-       responseBuffer += responseBuffer;
+       responseBuffer += stdout.toString('utf8');
+   });*/
+
+   exec ('bash scripts/local-web-to-source.sh', function(err, stdout, stderr) {
+       console.log(stdout.toString('utf8'));
+       responseBuffer += stdout.toString('utf8');
    });
 
-   console.log("Response: " + responseBuffer);
+   exec ('bash scripts/migration-script.sh', function(err, stdout, stderr) {
+       console.log(stdout.toString('utf8'));
+       responseBuffer += stdout.toString('utf8');
+   });
 
-   /*
-   // http://nodejs.org/api.html#_child_processes var sys = require('sys') var exec = require('child_process').exec; var child; // executes `pwd` child = exec("pwd", function (error, stdout, stderr) { sys.print('stdout: ' + stdout); sys.print('stderr: ' + stderr); if (error !== null) { console.log('exec error: ' + error); } }); 
-
-    // or more concisely
-    //var sys = require('sys') var exec = require('child_process').exec; function puts(error, stdout, stderr) { sys.puts(stdout) } exec("ls -la", puts);
-    */
+   responseBuffer += " will be migrated soon. Please check reports page for completion status."
+   console.log("\r\n Response: " + responseBuffer + "\r\n");
+   
+   res.end(responseBuffer);
 })
 
 app.use(function(req,res) {
