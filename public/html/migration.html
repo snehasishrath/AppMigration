@@ -34,24 +34,36 @@
 					<legend>Source</legend>
 					<div class="col-lg-12">
 						<label class="col-lg-3">Source Location</label>					
-						<input class="col-lg-3" type="text" placeholder="Source IP" name="sourceIp"/>
+						<input class="col-lg-3" type="text" placeholder="Source IP" name="sourceIp" required/>
 						<input class="col-lg-6" type="text" placeholder="(specific path)" name="sourceLocation"/>
-					</div>					
+					</div>
+					<div class="margin5">
+						<div class="col-lg-6">
+							<label class="col-lg-6">Username</label>
+							<input class="col-lg-6" type="text" placeholder="root" name="sourceUsername" required/>
+						</div>
+						<div class="col-lg-6">
+							<label class="col-lg-6">Password</label>
+							<input class="col-lg-6" type="password" placeholder="root password" name="sourcePassword" required/>
+						</div>
+					</div>				
 				</div>
 				<div class="margin5">
 					<legend>Destination</legend>
 					<div class="col-lg-12">
 						<label class="col-lg-3">Destination Location</label>
-						<input class="col-lg-3" type="text" placeholder="Destination IP" name="destIp"/>
+						<input class="col-lg-3" type="text" placeholder="Destination IP" name="destIp" required/>
 					    <input class="col-lg-6" type="text" placeholder="(specific path)" name="destLocation"/>
 					</div>
-					<div class="col-lg-12">
-						<label class="col-lg-6">Username</label>
-						<input class="col-lg-6" type="text" placeholder="Username" name="destUsername"/>
-					</div>
-					<div class="col-lg-12">
-						<label class="col-lg-6">Root Password</label>
-						<input class="col-lg-6" type="password" placeholder="Password" name="destPassword"/>
+					<div class="margin5">
+						<div class="col-lg-6">
+							<label class="col-lg-6">Username</label>
+							<input class="col-lg-6" type="text" placeholder="root" name="destUsername" required/>
+						</div>
+						<div class="col-lg-6">
+							<label class="col-lg-6">Password</label>
+							<input class="col-lg-6" type="password" placeholder="root password" name="destPassword" required/>
+						</div>
 					</div>
 				</div>
 				<div class="margin5">
@@ -68,7 +80,7 @@
             	</div>
 				<div class="margin5">
                     <legend>Migration Objects</legend>
-					<div class="col-lg-12 margin5">
+					<div class="col-lg-12">
                         <label class="col-lg-12">Web Servers</label>
                         <span class="col-lg-4">
 							<input type="checkbox" name="apacheTomcat" onchange="specificPathReminder(this, 'Apache Tomcat')" />

@@ -1,1 +1,1 @@
-rsync -avz --stats root@10.30.53.76 --progress 
+sshpass -p reset@123 ssh -o StrictHostKeyChecking=no root@10.30.53.184 echo "";sshpass -p reset@123 rsync -avz --stats --progress /root/file* root@10.30.53.184:/root/;
