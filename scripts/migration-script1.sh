@@ -1,1 +1,0 @@
-rsync -avz --stats testfile root@10.30.53.68 --progress

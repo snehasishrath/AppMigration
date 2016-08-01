@@ -43,6 +43,12 @@ body h2 {
 }
 legend {
 	border-bottom: 1px solid #999;
+	font-size: 14px;
+	font-weight: 600;
+	margin-bottom: 10px;
+}
+label {
+	font-weight: 500;
 }
 .navbar {
 	margin-bottom: 5px;

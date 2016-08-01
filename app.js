@@ -41,8 +41,8 @@ app.get('/contacts', function(req, res) {
    res.sendFile( __dirname + "/public/html/" + "contacts.html" );
 })
 
-app.post('/process_migration', function (req, res) {
-  console.log("Got a POST request for /process_migration" + " ' " + JSON.stringify(req.body) + " '");
+app.post('/migration', function (req, res) {
+  console.log("Got a POST request for /migration - " + "'" + JSON.stringify(req.body) + "'");
    /*response = {
        	sourceIp: req.body.sourceIp,
         sourceLocation: req.body.sourceLocation,
@@ -67,16 +67,33 @@ app.post('/process_migration', function (req, res) {
    var destIp = req.body.destIp
    var destLocation = req.body.destLocation
    var destPassword = req.body.destPassword
+
+   var OS = req.body.operatingSystem;
+   var pkgMgr = ""
+   var remoteInitScript = ""
+
+   var sshToDestination = 'sshpass -p ' + destPassword + ' ssh -o StrictHostKeyChecking=no root@' + destIp
+   var sshToSource = 'sshpass -p ' + sourcePassword + ' ssh -o StrictHostKeyChecking=no root@' + sourceIp
    
+   if (OS == "Ubuntu")
+   {
+    pkgMgr = "apt"
+   }
+   else if (OS == "Red Hat" || OS ==  "CentOS" || OS == "Fedora")
+   {
+    pkgMgr = "yum"
+   }
+
    if(req.body.apacheTomcat)
    {
     console.log("\r\n Selected Apache Tomcat");
+    remoteInitScript = sshToDestination + ' /bin/bash ' + pkgMgr + ' install -y ' + 'java-1.7.0-openjdk.x86_64;' + sshToDestination + ' /bin/bash /opt/tomcat/bin/startup.sh;'
     responseBuffer += "Apache Tomcat";
-    //sourceLocation += '/opt'
    }
    if(req.body.nodejsServer)
    {
     console.log("\r\n Selected Node.JS Server");
+    finalScript = ''
     responseBuffer += "Node.JS Server";
    }
    if(req.body.jbossServer)
@@ -90,6 +107,31 @@ app.post('/process_migration', function (req, res) {
     responseBuffer += "Nginx Server";
    }
 
+   //Database Server
+   if(req.body.mysqlServer)
+   {
+    console.log("\r\n Selected MySQL Server");
+
+    var mysqlIp = '10.30.53.198'
+    var mysqlPassword = root
+
+    var pkgInstall = pkgMgr + ' install -y ' + 'mariadb-server mysql; systemctl enable mariadb.service; systemctl start mariadb.service; systemctl status mariadb.service; mysqladmin -u root password ' + mysqlPassword
+    var dumpToFile = sshToSource + ' /bin/bash mysqldump -u root -p' + mysqlPassword +' --all-databases > /tmp/dump.sql;'
+    var moveConfigsToDestination = 'sshpass -p ' + destPassword + ' rsync -avz --stats --progress /etc/my.cnf root@' + destIp + ':/etc/my.cnf;' + 'sshpass -p ' + destPassword + ' rsync -avz --stats --progress /etc/my.cnf.d root@' + destIp + ':/etc/my.cnf.d;'
+    var replaceIpInConfigs = sshToDestination + 'sed -r -i \'s/^(bind-address = *.*.*.*)/\\bind-address = ' + mysqlIp + '/\' /etc/my.cnf.d/openstack.cnf'
+    var moveDumpToDestination = 'sshpass -p ' + destPassword + ' rsync -avz --stats --progress /tmp/dump.sql root@' + destIp + ':/tmp/dump.sql;'
+    var startService = sshToDestination + ' /bin/bash systemctl restart mariadb.service;'
+
+    remoteInitScript =  pkgInstall + dumpToFile + moveConfigsToDestination + replaceIpInConfigs + moveDumpToDestination + startService
+    responseBuffer += "MySQL Server";
+   }
+
+   //Authentication Server
+   if(req.body.ldapServer)
+   {
+    console.log("\r\n Selected LDAP Server");
+    responseBuffer += "LDAP Server";
+   }
    //Installation in Source and Destination
    /*fs.writeFile('scripts/local-web-to-source.sh', 'sshpass -p ' + sourcePassword + ' ssh -o StrictHostKeyChecking=no root@' + sourceIp + ' yum install sshpass -y;', 'utf8', function (err) {
        if (err) throw err;
@@ -100,78 +142,37 @@ app.post('/process_migration', function (req, res) {
        console.log('sshpass -p ' + destPassword + ' ssh -o StrictHostKeyChecking=no root@' + destIp + ' yum install sshpass -y');
    });*/
 
-   var actualHostKeySourceDestination = 'sshpass -p ' + destPassword + ' ssh -o StrictHostKeyChecking=no root@' + destIp + ' echo "";'
+   var actualHostKeySourceDestination = sshToDestination + ' echo "";'
    var rsyncSourceToDestination = 'sshpass -p ' + destPassword + ' rsync -avz --stats --progress ' + sourceLocation + ' root@' + destIp + ":" + destLocation + ';'
 
    var rsyncFileToSourceFromWebServer = 'sshpass -p ' + sourcePassword + ' rsync scripts/migration-script.sh root@' + sourceIp + ':/root/migration-script.sh;'
-   var scriptRunnableInSource = 'sshpass -p ' + sourcePassword + ' ssh -o StrictHostKeyChecking=no root@' + sourceIp + ' chmod +x /root/migration-script.sh;'
-   var runScriptInSource = 'sshpass -p ' + sourcePassword + ' ssh -o StrictHostKeyChecking=no root@' + sourceIp + ' /bin/bash /root/migration-script.sh;'
+   var scriptRunnableInSource = sshToSource + ' chmod +x /root/migration-script.sh;'
+   var runScriptInSource = sshToSource + ' /bin/bash /root/migration-script.sh;'
 
    var actualScript = actualHostKeySourceDestination + rsyncSourceToDestination;
-
-   var localScript = rsyncFileToSourceFromWebServer + scriptRunnableInSource + runScriptInSource;
+   var localScript = remoteInitScript + rsyncFileToSourceFromWebServer + scriptRunnableInSource + runScriptInSource;
 
    //Actual script in Source for migration
    fs.writeFile('scripts/migration-script.sh', actualScript, 'utf8', function (err) {
        if (err) throw err;
        console.log("\n" + actualScript);
    });
-   
-   /*fs.appendFile('scripts/migration-script.sh', rsyncSourceToDestination, 'utf8', function (err) {
-       if (err) throw err;
-       console.log(rsyncSourceToDestination);
-   });*/
 
-      //Rsync file to Source from Webserver
+   //Rsync file to Source from Webserver
    fs.writeFile('scripts/local-web-to-source.sh', localScript, 'utf8', function (err) {
        if (err) throw err;
        console.log("\n" + localScript);
    });
-
-   /*//Make the script runnable in Source from Webserver
-   fs.appendFile('scripts/local-web-to-source.sh', scriptRunnableInSource, 'utf8', function (err) {
-       if (err) throw err;
-       console.log(scriptRunnableInSource);
-   });
-
-   //Run the script in Source from Webserver
-   fs.appendFile('scripts/local-web-to-source.sh', runScriptInSource, 'utf8', function (err) {
-       if (err) throw err;
-       console.log(runScriptInSource);
-   });*/
-
-   /*exec ('/bin/bash scripts/rsync.py~', function(err, stdout, stderr) {
-       console.log(stdout.toString('utf8'));
-       responseBuffer += stdout.toString('utf8');
-   });
-
-   exec ('pwd', function(err, stdout, stderr) {
-       console.log(" Running pwd - " + stdout.toString('utf8'));
-       responseBuffer += stdout.toString('utf8');
-   });*/
 
    child_process.execFile('sh', ['scripts/local-web-to-source.sh'], function(err, stdout, stderr) {
        if(err)
         {
           console.log("Error: " + err);
         }
-        console.log(" Running local-web-to source script - " + stdout.toString('utf8'));
+        console.log(" Running local-web-to-source script - " + stdout.toString('utf8'));
         console.log(" Warning(s) - " + stderr.toString('utf8'));
        //responseBuffer += stdout.toString('utf8');
    });
-
-   /*child_process.exec('node -v', function(error, stdout, stderr) {
-      console.log('stdout: ' + stdout);
-      console.log('stderr: ' + stderr);
-      if (error !== null) {
-          console.log('exec error: ' + error);
-      }
-   });*/
-
-   /*exec ('/bin/bash scripts/migration-script.sh', function(err, stdout, stderr) {
-       console.log(" Running migration script " + stdout.toString('utf8'));
-       responseBuffer += stdout.toString('utf8');
-   });*/
 
    responseBuffer += " will be migrated soon. Please check reports page for completion status."
    console.log("\r\n Response: " + responseBuffer + "\r\n");
