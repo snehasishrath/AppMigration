@@ -70,6 +70,8 @@ app.post('/migration', function (req, res) {
 
    var OS = req.body.operatingSystem;
    var pkgMgr = ""
+   var actualScript = ""
+   var localScript = ""
    var remoteInitScript = ""
 
    var sshToDestination = 'sshpass -p ' + destPassword + ' ssh -o StrictHostKeyChecking=no root@' + destIp
@@ -118,11 +120,15 @@ app.post('/migration', function (req, res) {
     var pkgInstall = pkgMgr + ' install -y ' + 'mariadb-server mysql; systemctl enable mariadb.service; systemctl start mariadb.service; systemctl status mariadb.service; mysqladmin -u root password ' + mysqlPassword
     var dumpToFile = sshToSource + ' /bin/bash mysqldump -u root -p' + mysqlPassword +' --all-databases > /tmp/dump.sql;'
     var moveConfigsToDestination = 'sshpass -p ' + destPassword + ' rsync -avz --stats --progress /etc/my.cnf root@' + destIp + ':/etc/my.cnf;' + 'sshpass -p ' + destPassword + ' rsync -avz --stats --progress /etc/my.cnf.d root@' + destIp + ':/etc/my.cnf.d;'
-    var replaceIpInConfigs = sshToDestination + 'sed -r -i \'s/^(bind-address = *.*.*.*)/\\bind-address = ' + mysqlIp + '/\' /etc/my.cnf.d/openstack.cnf'
+    var replaceIpInConfigs = sshToDestination + ' sed -r -i \'s/^(bind-address = *.*.*.*)/\\bind-address = ' + mysqlIp + '/\' /etc/my.cnf.d/openstack.cnf'
+    console.log("\r\nReplace IP : " + replaceIpInConfigs + '\r\n');
     var moveDumpToDestination = 'sshpass -p ' + destPassword + ' rsync -avz --stats --progress /tmp/dump.sql root@' + destIp + ':/tmp/dump.sql;'
+    var applyDumpToServer = sshToDestination + ' mysql -u root -p' + mysqlPassword + ' < /tmp/dump.sql'
     var startService = sshToDestination + ' /bin/bash systemctl restart mariadb.service;'
 
-    remoteInitScript =  pkgInstall + dumpToFile + moveConfigsToDestination + replaceIpInConfigs + moveDumpToDestination + startService
+    actualScript =  pkgInstall + replaceIpInConfigs + moveDumpToDestination + applyDumpToServer + startService
+    localScript = dumpToFile + moveConfigsToDestination
+
     responseBuffer += "MySQL Server";
    }
 
@@ -130,6 +136,19 @@ app.post('/migration', function (req, res) {
    if(req.body.ldapServer)
    {
     console.log("\r\n Selected LDAP Server");
+
+    var pkgInstall = pkgMgr + ' install -y ' + 'openldap openldap-servers openldap-clients; systemctl enable slapd.service; systemctl start slapd.service; systemctl status slapd.service;'
+    var dumpToFile = sshToSource + ' /bin/bash slapcat -f /etc/openldap/ldap.conf -l /tmp/backup.ldif;'
+    var moveConfigsToDestination = 'sshpass -p ' + destPassword + ' rsync -avz --stats --progress /etc/openldap/ldap.conf root@' + destIp + ':/etc/openldap/ldap.conf;'
+    var moveDumpToDestination = 'sshpass -p ' + destPassword + ' rsync -avz --stats --progress /tmp/backup.ldif root@' + destIp + ':/tmp/backup.ldif;'
+    var stopService = sshToDestination + ' /bin/bash systemctl stop slapd.service;'
+    var chownRootToLdap = sshToDestination + ' /bin/bash chown -R ldap:ldap /var/lib/ldap;'
+	var applyDumpToServer = sshToDestination + ' slapadd -v -c -l /tmp/backup.ldif -f /etc/openldap/ldap.conf;'
+    var startService = sshToDestination + ' /bin/bash systemctl restart slapd.service;'
+
+    actualScript =  pkgInstall + moveDumpToDestination + stopService + applyDumpToServer + startService
+    localScript = dumpToFile + moveConfigsToDestination
+
     responseBuffer += "LDAP Server";
    }
    //Installation in Source and Destination
@@ -142,15 +161,19 @@ app.post('/migration', function (req, res) {
        console.log('sshpass -p ' + destPassword + ' ssh -o StrictHostKeyChecking=no root@' + destIp + ' yum install sshpass -y');
    });*/
 
-   var actualHostKeySourceDestination = sshToDestination + ' echo "";'
-   var rsyncSourceToDestination = 'sshpass -p ' + destPassword + ' rsync -avz --stats --progress ' + sourceLocation + ' root@' + destIp + ":" + destLocation + ';'
+   if(req.body.apacheTomcat || req.body.nodejsServer || req.body.jbossServer || req.body.nginxServer)
+   {
+	   var actualHostKeySourceDestination = sshToDestination + ' echo "";'
+	   var rsyncSourceToDestination = 'sshpass -p ' + destPassword + ' rsync -avz --stats --progress ' + sourceLocation + ' root@' + destIp + ":" + destLocation + ';'
 
-   var rsyncFileToSourceFromWebServer = 'sshpass -p ' + sourcePassword + ' rsync scripts/migration-script.sh root@' + sourceIp + ':/root/migration-script.sh;'
-   var scriptRunnableInSource = sshToSource + ' chmod +x /root/migration-script.sh;'
-   var runScriptInSource = sshToSource + ' /bin/bash /root/migration-script.sh;'
+	   var rsyncFileToSourceFromWebServer = 'sshpass -p ' + sourcePassword + ' rsync scripts/migration-script.sh root@' + sourceIp + ':/root/migration-script.sh;'
+	   var scriptRunnableInSource = sshToSource + ' chmod +x /root/migration-script.sh;'
+	   var runScriptInSource = sshToSource + ' sh /root/migration-script.sh;'
 
-   var actualScript = actualHostKeySourceDestination + rsyncSourceToDestination;
-   var localScript = remoteInitScript + rsyncFileToSourceFromWebServer + scriptRunnableInSource + runScriptInSource;
+	   var actualScript = actualHostKeySourceDestination + rsyncSourceToDestination;
+	   var localScript = rsyncFileToSourceFromWebServer + scriptRunnableInSource + runScriptInSource;
+	}
+
 
    //Actual script in Source for migration
    fs.writeFile('scripts/migration-script.sh', actualScript, 'utf8', function (err) {
@@ -164,7 +187,17 @@ app.post('/migration', function (req, res) {
        console.log("\n" + localScript);
    });
 
-   child_process.execFile('sh', ['scripts/local-web-to-source.sh'], function(err, stdout, stderr) {
+   child_process.exec('pwd', function(err, stdout, stderr) {
+       if(err)
+        {
+          console.log("Error: " + err);
+        }
+        console.log(" Running pwd - " + stdout.toString('utf8'));
+        console.log(" Warning(s) - " + stderr.toString('utf8'));
+       //responseBuffer += stdout.toString('utf8');
+   });
+
+   child_process.exec('chmod +x scripts/local-web-to-source.sh; sh scripts/local-web-to-source.sh', function(err, stdout, stderr) {
        if(err)
         {
           console.log("Error: " + err);
