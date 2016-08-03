@@ -58,7 +58,7 @@
 						</div>
 						<div class="col-lg-6">
 							<label class="col-lg-6">Password</label>
-							<input class="col-lg-6" type="password" placeholder="root password" name="sourcePassword" required data-ng-model="sourcePassword" id="sourcePassword"/>
+							<input class="col-lg-6" type="text" placeholder="root password" name="sourcePassword" required data-ng-model="sourcePassword" id="sourcePassword"/>
 						</div>
 					</div>				
 				</div>				
@@ -76,7 +76,7 @@
 						</div>
 						<div class="col-lg-6">
 							<label class="col-lg-6">Password</label>
-							<input class="col-lg-6" type="password" placeholder="root password" name="destPassword" required data-ng-model="destPassword" id="destPassword"/>
+							<input class="col-lg-6" type="text" placeholder="root password" name="destPassword" required data-ng-model="destPassword" id="destPassword"/>
 						</div>
 					</div>
 				</div>				
@@ -148,12 +148,14 @@
 			if(context == "Apache Tomcat")
 			{
 				document.getElementById('sourceLocation').value = '/opt/tomcat/';
+				document.getElementById('destLocation').value = '/opt/tomcat/';
 			}
 		}
 		if(!element.checked) {
 			if(context == "Apache Tomcat")
 			{
 				document.getElementById('sourceLocation').value = '';
+				document.getElementById('destLocation').value = '';
 			}
 		}
 	}

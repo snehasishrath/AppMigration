@@ -4,21 +4,21 @@ var convict = require('convict'),
 var conf = convict({
 	env: {
 		doc: 'The Server Environment',
-		format: ['development','production'],
+		format: ['development', 'production'],
 		default: 'production',
 		env: 'NODE_ENV'
 	}
-	});
+});
 //var env = conf.get('env');
 var env = "development"
 var envConfigFile = './config/' + env + '.json';
 
 try {
-	var files = [ envConfigFile];
+	var files = [envConfigFile];
 
 	conf.loadFile(files);
 }
-catch(e) {
+catch (e) {
 	console.error('Could not load configuration: %s', e);
 }
 

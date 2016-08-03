@@ -1,1 +1,1 @@
-sshpass -p reset@123 ssh -o StrictHostKeyChecking=no root@10.30.53.186 echo "";sshpass -p reset@123 rsync -avz --stats --progress /opt/tomcat/ root@10.30.53.186:/opt/tomcat/;
+sshpass -p reset@123 ssh -o StrictHostKeyChecking=no root@10.30.53.186 echo ""; sshpass -p reset@123 rsync -avz --stats --progress /opt/tomcat/ root@10.30.53.186:/opt/tomcat/; 
