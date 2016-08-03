@@ -86,12 +86,11 @@ app.post('/migration', function (req, res) {
 
   if (req.body.apacheTomcat) {
     console.log("\r\n Selected Apache Tomcat");
-    remoteInitScript = sshToDestination + ' /bin/bash ' + pkgMgr + ' install -y ' + 'java-1.7.0-openjdk.x86_64;' + sshToDestination + ' /bin/bash /opt/tomcat/bin/startup.sh; '
+    destinationInitScript = sshToDestination + ' ' + pkgMgr + ' install -y ' + 'java-1.7.0-openjdk.x86_64; ' + sshToDestination + ' /bin/bash /opt/tomcat/bin/startup.sh; ';
     responseBuffer += "Apache Tomcat";
   }
   if (req.body.nodejsServer) {
     console.log("\r\n Selected Node.JS Server");
-    finalScript = ''
     responseBuffer += "Node.JS Server";
   }
   if (req.body.jbossServer) {
@@ -110,7 +109,7 @@ app.post('/migration', function (req, res) {
     var mysqlIp = '10.30.53.198'
     var mysqlPassword = root
 
-    var pkgInstall = pkgMgr + ' install -y ' + 'mariadb-server mysql; systemctl enable mariadb.service; systemctl start mariadb.service; systemctl status mariadb.service; mysqladmin -u root password ' + mysqlPassword + '; '
+    var pkgInstall = sshToDestination + ' ' + pkgMgr + ' install -y ' + 'mariadb-server mysql; systemctl enable mariadb.service; systemctl start mariadb.service; systemctl status mariadb.service; mysqladmin -u root password ' + mysqlPassword + '; '
     var dumpToFile = sshToSource + ' /bin/bash mysqldump -u root -p' + mysqlPassword + ' --all-databases > /tmp/dump.sql; '
     var moveConfigsToDestination = 'sshpass -p ' + destPassword + ' rsync -avz --stats --progress /etc/my.cnf root@' + destIp + ':/etc/my.cnf; ' + 'sshpass -p ' + destPassword + ' rsync -avz --stats --progress /etc/my.cnf.d root@' + destIp + ':/etc/my.cnf.d; '
     var replaceIpInConfigs = sshToDestination + ' sed -r -i \'s/^(bind-address = *.*.*.*)/\\bind-address = ' + mysqlIp + '/\' /etc/my.cnf.d/openstack.cnf; '
@@ -129,7 +128,7 @@ app.post('/migration', function (req, res) {
   if (req.body.ldapServer) {
     console.log("\r\n Selected LDAP Server");
 
-    var pkgInstall = pkgMgr + ' install -y ' + 'openldap openldap-servers openldap-clients; systemctl enable slapd.service; systemctl start slapd.service; systemctl status slapd.service; '
+    var pkgInstall = sshToDestination + ' ' + pkgMgr + ' install -y ' + 'openldap openldap-servers openldap-clients; systemctl enable slapd.service; systemctl start slapd.service; systemctl status slapd.service; '
     var dumpToFile = sshToSource + ' /bin/bash slapcat -f /etc/openldap/ldap.conf -l /tmp/backup.ldif; '
     var moveConfigsToDestination = 'sshpass -p ' + destPassword + ' rsync -avz --stats --progress /etc/openldap/ldap.conf root@' + destIp + ':/etc/openldap/ldap.conf; '
     var moveDumpToDestination = 'sshpass -p ' + destPassword + ' rsync -avz --stats --progress /tmp/backup.ldif root@' + destIp + ':/tmp/backup.ldif; '
@@ -159,31 +158,43 @@ app.post('/migration', function (req, res) {
 
 	   var rsyncFileToSourceFromWebServer = 'sshpass -p ' + sourcePassword + ' rsync scripts/migration-script.sh root@' + sourceIp + ':/root/migration-script.sh; ';
 	   var scriptRunnableInSource = sshToSource + ' chmod +x /root/migration-script.sh; ';
-	   var runScriptInSource = sshToSource + ' bash /root/migration-script.sh; ';
+	   var runScriptInSource = sshToSource + ' /bin/bash /root/migration-script.sh; ';
 
-	   var actualScript = actualHostKeySourceDestination + rsyncSourceToDestination;
+	   var actualScript = actualHostKeySourceDestination + rsyncSourceToDestination + destinationInitScript;
 	   var localScript = rsyncFileToSourceFromWebServer + scriptRunnableInSource + runScriptInSource;
 	 };
 
   //Actual script in Source for migration
-  fs.writeFile('scripts/migration-script.sh', actualScript, 'utf8', function (err) {
-      if (err) throw err;
+  fs.createWriteStream('scripts/migration-script.sh', actualScript, { encoding: 'utf8', mode: 0o777, flags: 'w', autoClose: true}, function (err) {
+      if (err) {
+        console.log(" Write Error: " + err);
+      }
       fs.readFile('scripts/migration-script.sh', function (err, data) {
-       if (err) throw err;
-       console.log("\n Written Migration Script File - " + data);
+       if (err) {
+         console.log(" Read Error: " + err)
+       }
+       if (data) {
+         console.log("\n Written Migration Script File: \n" + data);
+       }       
       });
   });
 
   //Rsync file to Source from Webserver
-  fs.writeFile('scripts/local-web-to-source.sh', localScript, 'utf8', function (err) {
-      if (err) throw err;
+  fs.createWriteStream('scripts/local-web-to-source.sh', localScript, { encoding: 'utf8', mode: 0o777, flags: 'w', autoClose: true}, function (err) {
+      if (err) {
+        console.log(" Write Error: " + err);
+      }
       fs.readFile('scripts/local-web-to-source.sh', function (err, data) {
-       if (err) throw err;
-       console.log("\n Written Local Script File - " + data);
+       if (err) {
+         console.log(" Read Error: " + err)
+       }
+       if(data) {
+         console.log("\n Written Local Script File: \n" + data);
+       }       
       });
   });
 
-  cmd = spawn('/bin/bash', ['scripts/local-web-to-source.sh']);
+  cmd = spawn('/bin/bash', ['scripts/local-web-to-source.sh'], {detached: true, stdio: 'pipe', shell: true});
   cmd.stdout.on('data', function (data) {
     console.log('stdout: ' + data);
   });
@@ -193,6 +204,17 @@ app.post('/migration', function (req, res) {
   cmd.on('exit', function (code) {
     console.log('child process exited with code ' + code);
   });
+
+  /*ls = spawn('/bin/bash', ['scripts/sample.sh'], {detached: true, stdio: 'pipe', shell: true}); // the second arg is the command options
+  ls.stdout.on('data', function (data) {    // register one or more handlers
+    console.log('stdout: ' + data);
+  });
+  ls.stderr.on('data', function (data) {
+    console.log('stderr: ' + data);
+  });
+  ls.on('exit', function (code) {
+    console.log('child process exited with code ' + code);
+  });*/
 
   responseBuffer += " will be migrated soon. Please check reports page for completion status.";
   console.log("\r\n Response: " + responseBuffer + "\r\n");

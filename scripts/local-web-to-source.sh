@@ -1,1 +1,0 @@
-sshpass -p reset@123 rsync scripts/migration-script.sh root@10.30.53.76:/root/migration-script.sh; sshpass -p reset@123 ssh -o StrictHostKeyChecking=no root@10.30.53.76 chmod +x /root/migration-script.sh; sshpass -p reset@123 ssh -o StrictHostKeyChecking=no root@10.30.53.76 bash /root/migration-script.sh; 
