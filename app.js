@@ -77,6 +77,12 @@ app.post('/migration', function (req, res) {
   var sshToDestination = 'sshpass -p ' + destPassword + ' ssh -o StrictHostKeyChecking=no root@' + destIp;
   var sshToSource = 'sshpass -p ' + sourcePassword + ' ssh -o StrictHostKeyChecking=no root@' + sourceIp;
 
+  var rsyncFileToSourceFromWebServer = 'sshpass -p ' + sourcePassword + ' rsync scripts/migration-script.sh root@' + sourceIp + ':/root/migration-script.sh; ';
+  var scriptRunnableInSource = sshToSource + ' chmod +x /root/migration-script.sh; ';
+  var runScriptInSource = sshToSource + ' /bin/bash /root/migration-script.sh; ';
+
+  var localScript = rsyncFileToSourceFromWebServer + scriptRunnableInSource + runScriptInSource;
+
   if (OS == "Ubuntu") {
     pkgMgr = "apt";
   }
@@ -106,20 +112,21 @@ app.post('/migration', function (req, res) {
   if (req.body.mysqlServer) {
     console.log("\r\n Selected MySQL Server");
 
-    var mysqlIp = '10.30.53.198'
-    var mysqlPassword = root
+    var mysqlIp = '10.30.53.198';
+    var mysqlPassword = 'cloud';
 
-    var pkgInstall = sshToDestination + ' ' + pkgMgr + ' install -y ' + 'mariadb-server mysql; systemctl enable mariadb.service; systemctl start mariadb.service; systemctl status mariadb.service; mysqladmin -u root password ' + mysqlPassword + '; '
-    var dumpToFile = sshToSource + ' /bin/bash mysqldump -u root -p' + mysqlPassword + ' --all-databases > /tmp/dump.sql; '
-    var moveConfigsToDestination = 'sshpass -p ' + destPassword + ' rsync -avz --stats --progress /etc/my.cnf root@' + destIp + ':/etc/my.cnf; ' + 'sshpass -p ' + destPassword + ' rsync -avz --stats --progress /etc/my.cnf.d root@' + destIp + ':/etc/my.cnf.d; '
-    var replaceIpInConfigs = sshToDestination + ' sed -r -i \'s/^(bind-address = *.*.*.*)/\\bind-address = ' + mysqlIp + '/\' /etc/my.cnf.d/openstack.cnf; '
-    console.log("\r\nReplace IP : " + replaceIpInConfigs + '\r\n');
-    var moveDumpToDestination = 'sshpass -p ' + destPassword + ' rsync -avz --stats --progress /tmp/dump.sql root@' + destIp + ':/tmp/dump.sql; '
-    var applyDumpToServer = sshToDestination + ' mysql -u root -p' + mysqlPassword + ' < /tmp/dump.sql; '
-    var startService = sshToDestination + ' /bin/bash systemctl restart mariadb.service;'
+    var dumpToFile = sshToSource + ' mysqldump -u root -p' + mysqlPassword + ' --all-databases > /tmp/dump.sql; ';
+    var actualHostKeySourceDestination = sshToDestination + ' echo ""; ';
+    var pkgInstall = sshToDestination + ' ' + pkgMgr + ' install -y ' + 'mariadb-server mysql; systemctl enable mariadb.service; systemctl start mariadb.service; mysqladmin -u root password ' + mysqlPassword + '; ';
+    var stopService = sshToDestination + ' systemctl stop mariadb.service; ';    
+    var moveConfigsToDestination = 'sshpass -p ' + destPassword + ' rsync -avz --stats --progress /etc/my.cnf root@' + destIp + ':/etc/my.cnf; ' + 'sshpass -p ' + destPassword + ' rsync -avz --stats --progress /etc/my.cnf.d root@' + destIp + ':/etc/my.cnf.d; ';
+    //var replaceIpInConfigs = sshToDestination + ' sed -r -i \'s/^(bind-address = *.*.*.*)/\\bind-address = ' + mysqlIp + '/\' /etc/my.cnf.d/openstack.cnf; ';
+    //console.log("\r\nReplace IP : " + replaceIpInConfigs + '\r\n');
+    var moveDumpToDestination = 'sshpass -p ' + destPassword + ' rsync -avz --stats --progress /tmp/dump.sql root@' + destIp + ':/tmp/dump.sql; ';
+    var applyDumpToServer = sshToDestination + ' mysql -u root -p' + mysqlPassword + ' < /tmp/dump.sql; ';
+    var startService = sshToDestination + ' systemctl start mariadb.service;';
 
-    actualScript = pkgInstall + replaceIpInConfigs + moveDumpToDestination + applyDumpToServer + startService
-    localScript = dumpToFile + moveConfigsToDestination
+    actualScript = dumpToFile + actualHostKeySourceDestination + pkgInstall + stopService + moveConfigsToDestination +  moveDumpToDestination + applyDumpToServer + startService;
 
     responseBuffer += "MySQL Server";
   }
@@ -128,20 +135,21 @@ app.post('/migration', function (req, res) {
   if (req.body.ldapServer) {
     console.log("\r\n Selected LDAP Server");
 
-    var pkgInstall = sshToDestination + ' ' + pkgMgr + ' install -y ' + 'openldap openldap-servers openldap-clients; systemctl enable slapd.service; systemctl start slapd.service; systemctl status slapd.service; '
-    var dumpToFile = sshToSource + ' /bin/bash slapcat -f /etc/openldap/ldap.conf -l /tmp/backup.ldif; '
-    var moveConfigsToDestination = 'sshpass -p ' + destPassword + ' rsync -avz --stats --progress /etc/openldap/ldap.conf root@' + destIp + ':/etc/openldap/ldap.conf; '
-    var moveDumpToDestination = 'sshpass -p ' + destPassword + ' rsync -avz --stats --progress /tmp/backup.ldif root@' + destIp + ':/tmp/backup.ldif; '
-    var stopService = sshToDestination + ' /bin/bash systemctl stop slapd.service; '
-    var chownRootToLdap = sshToDestination + ' /bin/bash chown -R ldap:ldap /var/lib/ldap; '
-    var applyDumpToServer = sshToDestination + ' slapadd -v -c -l /tmp/backup.ldif -f /etc/openldap/ldap.conf; '
-    var startService = sshToDestination + ' /bin/bash systemctl restart slapd.service; '
-
-    actualScript = pkgInstall + moveDumpToDestination + stopService + applyDumpToServer + startService
-    localScript = dumpToFile + moveConfigsToDestination
+    var dumpToFile = sshToSource + ' /bin/bash slapcat -f /etc/openldap/ldap.conf -l /tmp/backup.ldif; ';
+    var actualHostKeySourceDestination = sshToDestination + ' echo ""; ';
+    var pkgInstall = sshToDestination + ' ' + pkgMgr + ' install -y ' + 'openldap openldap-servers openldap-clients; systemctl enable slapd.service; systemctl start slapd.service; systemctl status slapd.service; ';
+    var moveConfigsToDestination = 'sshpass -p ' + destPassword + ' rsync -avz --stats --progress /etc/openldap/ldap.conf root@' + destIp + ':/etc/openldap/ldap.conf; ';
+    var moveDumpToDestination = 'sshpass -p ' + destPassword + ' rsync -avz --stats --progress /tmp/backup.ldif root@' + destIp + ':/tmp/backup.ldif; ';
+    var stopService = sshToDestination + ' /bin/bash systemctl stop slapd.service; ';
+    var chownRootToLdap = sshToDestination + ' /bin/bash chown -R ldap:ldap /var/lib/ldap; ';
+    var applyDumpToServer = sshToDestination + ' slapadd -v -c -l /tmp/backup.ldif -f /etc/openldap/ldap.conf; ';
+    var startService = sshToDestination + ' /bin/bash systemctl restart slapd.service; ';    
+    
+    actualScript = dumpToFile + actualHostKeySourceDestination + pkgInstall + moveConfigsToDestination + moveDumpToDestination + stopService + chownRootToLdap + applyDumpToServer + startService;
 
     responseBuffer += "LDAP Server";
   }
+
   //Installation in Source and Destination
   /*fs.writeFile('scripts/local-web-to-source.sh', 'sshpass -p ' + sourcePassword + ' ssh -o StrictHostKeyChecking=no root@' + sourceIp + ' yum install sshpass -y;', 'utf8', function (err) {
       if (err) throw err;
@@ -153,68 +161,57 @@ app.post('/migration', function (req, res) {
   });*/
 
   if (req.body.apacheTomcat || req.body.nodejsServer || req.body.jbossServer || req.body.nginxServer) {
+
 	   var actualHostKeySourceDestination = sshToDestination + ' echo ""; ';
 	   var rsyncSourceToDestination = 'sshpass -p ' + destPassword + ' rsync -avz --stats --progress ' + sourceLocation + ' root@' + destIp + ":" + destLocation + '; ';
 
-	   var rsyncFileToSourceFromWebServer = 'sshpass -p ' + sourcePassword + ' rsync scripts/migration-script.sh root@' + sourceIp + ':/root/migration-script.sh; ';
-	   var scriptRunnableInSource = sshToSource + ' chmod +x /root/migration-script.sh; ';
-	   var runScriptInSource = sshToSource + ' /bin/bash /root/migration-script.sh; ';
-
 	   var actualScript = actualHostKeySourceDestination + rsyncSourceToDestination + destinationInitScript;
-	   var localScript = rsyncFileToSourceFromWebServer + scriptRunnableInSource + runScriptInSource;
 	 };
 
   //Actual script in Source for migration
-  fs.createWriteStream('scripts/migration-script.sh', actualScript, { encoding: 'utf8', mode: 0o777, flags: 'w', autoClose: true}, function (err) {
-      if (err) {
-        console.log(" Write Error: " + err);
-      }
-      fs.readFile('scripts/migration-script.sh', function (err, data) {
-       if (err) {
-         console.log(" Read Error: " + err)
-       }
-       if (data) {
-         console.log("\n Written Migration Script File: \n" + data);
-       }       
-      });
+  var options = { encoding: 'utf8', mode: 0o777, flags: 'w', autoClose: true };
+  var wstream = fs.createWriteStream('scripts/migration-script.sh', options);
+  wstream.on('finish', function () {
+    console.log('Migration Script - File write complete!');
+    scriptLocalFile();
   });
+  wstream.write(actualScript);
+  wstream.end();
 
-  //Rsync file to Source from Webserver
-  fs.createWriteStream('scripts/local-web-to-source.sh', localScript, { encoding: 'utf8', mode: 0o777, flags: 'w', autoClose: true}, function (err) {
-      if (err) {
-        console.log(" Write Error: " + err);
-      }
-      fs.readFile('scripts/local-web-to-source.sh', function (err, data) {
-       if (err) {
-         console.log(" Read Error: " + err)
-       }
-       if(data) {
-         console.log("\n Written Local Script File: \n" + data);
-       }       
-      });
-  });
+  function scriptLocalFile() {
+    //Rsync file to Source from Webserver
+    var wstream = fs.createWriteStream('scripts/local-web-to-source.sh', options);
+    wstream.on('finish', function () {
+      console.log('Local Web to Source Script - File write complete!');
+      spawnProcess();
+    });
+    wstream.write(localScript);
+    wstream.end();
+  };
 
-  cmd = spawn('/bin/bash', ['scripts/local-web-to-source.sh'], {detached: true, stdio: 'pipe', shell: true});
-  cmd.stdout.on('data', function (data) {
-    console.log('stdout: ' + data);
-  });
-  cmd.stderr.on('data', function (data) {
-    console.log('stderr: ' + data);
-  });
-  cmd.on('exit', function (code) {
-    console.log('child process exited with code ' + code);
-  });
+  function spawnProcess() {
+    cmd = spawn('/bin/bash', ['scripts/local-web-to-source.sh'], {detached: true, stdio: 'pipe', shell: true});
+    cmd.stdout.on('data', function (data) {
+      console.log('stdout: ' + data);
+    });
+    cmd.stderr.on('data', function (data) {
+      console.log('stderr: ' + data);
+    });
+    cmd.on('exit', function (code) {
+      console.log('child process exited with code ' + code);
+    });
 
-  /*ls = spawn('/bin/bash', ['scripts/sample.sh'], {detached: true, stdio: 'pipe', shell: true}); // the second arg is the command options
-  ls.stdout.on('data', function (data) {    // register one or more handlers
-    console.log('stdout: ' + data);
-  });
-  ls.stderr.on('data', function (data) {
-    console.log('stderr: ' + data);
-  });
-  ls.on('exit', function (code) {
-    console.log('child process exited with code ' + code);
-  });*/
+    ls = spawn('/bin/bash', ['scripts/sample.sh'], {detached: true, stdio: 'pipe', shell: true}); // the second arg is the command options
+    ls.stdout.on('data', function (data) {    // register one or more handlers
+      console.log('stdout: ' + data);
+    });
+    ls.stderr.on('data', function (data) {
+      console.log('stderr: ' + data);
+    });
+    ls.on('exit', function (code) {
+      console.log('child process exited with code ' + code);
+    });
+  };
 
   responseBuffer += " will be migrated soon. Please check reports page for completion status.";
   console.log("\r\n Response: " + responseBuffer + "\r\n");
